@@ -35,6 +35,16 @@ namespace binding {
     value_type& operator()()
     { return converter_.access(); }
 
+    typedef node<T> this_type;
+    typedef void (this_type::*bool_hack)() const;
+    void bool_workaround() const
+    {}
+
+    operator bool_hack() const {
+      bool result = converter_;
+      return result ? &this_type::bool_workaround : 0;
+    }
+
     const std::string& name() const;
     const std::string& value() const;
 

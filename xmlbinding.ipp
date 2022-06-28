@@ -58,23 +58,43 @@ namespace binding {
   bind(support::error_code& err,
        dom::node::ptr np) {
 
-    /// start at the first child of the supplied node
+    if (! np) {
+      std::string s = "Warning: composite::bind supplied null dom::node ptr.";
+      std::cout << s << std::endl;
+      return false;
+    }
+    /// we need the underlying xerces node to iterate
     xercesc::DOMNode* xnode = np->xerces_node();
     if (! xnode) {
+      std::string s = "Warning: composite::bind supplied null xerces::node ptr.";
+      std::cout << s << std::endl;
       return false;
     }
+    /// start at the first child of the supplied node
     xercesc::DOMNode* link = xnode->getFirstChild();
     if ( !link) {
+      std::string s = "Warning: composite::bind encountered null first child.";
+      std::cout << s << std::endl;
       return false;
     }
-    bool result = true;
-
     /// iterate through all links as siblings
+    bool result = true;
     for ( ; link != NULL; link = link->getNextSibling() ) {
 
+      if (! link) {
+        std::cout << "Warning: composite::bind a sibling link node is null.";
+        result = false;
+        continue;
+      }
+      /// can we safely skip text nodes?
+      if (link->getNodeType() == xercesc::DOMNode::TEXT_NODE) {
+        continue;
+      }
       /// create the adapter dom node using the factory
       dom::node::ptr dnp = dom::node_factory::create(link);
       if (!dnp) {
+        std::string s = "Warning: could not create adapter node from link.";
+        std::cout << s << std::endl;
         result = false;
         continue;
       }
@@ -83,11 +103,18 @@ namespace binding {
       mappings::iterator p = mappings_.find(name);
       if (p != mappings_.end()) {
 
-        /// yes it does, call bind on the binding node ptr
-        /// pass in this child node in the chain, the binding node
-        /// will know what to do with it
+        /// - yes it does, call bind on the binding node ptr
+        /// - pass in this child node in the chain, the binding node
+        /// - will know what to do with it
         binding::node_base* bnp = p->second;
         result &= bnp->bind(err, dnp);
+      }
+      else {
+        /// this may not signal a failure - need optional capability
+        std::string s = "Warning: could not find mapping for <";
+        s += name + ">.";
+        std::cout << s << std::endl;
+        result = false;
       }
     }
     return result;

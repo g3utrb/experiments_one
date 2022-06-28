@@ -25,6 +25,19 @@ namespace binding {
     const std::string& value() const;
     std::string& value();
 
+    typedef converter<T> this_type;
+    typedef void (this_type::*bool_hack)() const;
+    void bool_workaround() const
+    {}
+
+    operator bool_hack() const {
+      bool result = node_.get() != nullptr;
+      return result ? &this_type::bool_workaround : 0;
+    }
+
+    operator bool() const
+    { return node_.get() != nullptr; }
+  
   protected:
 
     converter(converter_type& crtp);
