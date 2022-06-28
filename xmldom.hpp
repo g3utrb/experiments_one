@@ -10,6 +10,7 @@
 #include <xercesc/dom/DOMNode.hpp>
 #include <xercesc/dom/DOMElement.hpp>
 #include <xercesc/dom/DOMAttr.hpp>
+#include <xercesc/dom/DOMText.hpp>
 #include <xercesc/parsers/XercesDOMParser.hpp>
 #include <xercesc/framework/MemBufInputSource.hpp>
 
@@ -52,6 +53,11 @@ namespace dom {
     attribute(xercesc::DOMAttr* nodep);
   };
 
+  class text_node : public node {
+  public:
+    text_node(xercesc::DOMText* dnp);
+  };
+
   class node_factory {
   public:
     static node::ptr create(xercesc::DOMNode* xnode);
@@ -85,17 +91,18 @@ namespace dom {
       }
       XMLString::release(&tmp);
 
-      xercesc::DOMNodeList* chain = node_->getChildNodes();
-      if (! chain) return;
+      xercesc::DOMNode* link = node_->getFirstChild();
+      if (! link) return;
 
-      for (XMLSize_t i = 0; i < chain->getLength(); ++i) {
-        DOMNode* item = chain->item(i);
-        if (item && item->getNodeType() == xercesc::DOMNode::TEXT_NODE) {
-          tmp = XMLString::transcode(item->getNodeValue());
+      for (; link != NULL; link = link->getNextSibling() ) {
+
+        if (link && link->getNodeType() == xercesc::DOMNode::TEXT_NODE) {
+          tmp = XMLString::transcode(link->getNodeValue());
           value_.assign(tmp, ::strlen(tmp));
           XMLString::release(&tmp);
           break;
         }
+
       }
       XMLString::release(&tmp);
     }
@@ -148,6 +155,12 @@ namespace dom {
     node(xnode) {
   }
 
+  inline
+  text_node::
+  text_node(xercesc::DOMText* xnode) :
+    node(xnode) {
+  }
+
   inline node::ptr
   node_factory::
   create(xercesc::DOMNode* dnp) {
@@ -168,6 +181,13 @@ namespace dom {
 
         xercesc::DOMAttr*  dap = (xercesc::DOMAttr*) dnp;
         np = std::make_shared<attribute>(dap);
+        break;
+
+      }
+      case xercesc::DOMNode::TEXT_NODE: {
+
+        xercesc::DOMText*  dtp = (xercesc::DOMText*) dnp;
+        np = std::make_shared<text_node>(dtp);
         break;
 
       }

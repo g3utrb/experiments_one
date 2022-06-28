@@ -58,21 +58,26 @@ namespace binding {
   bind(support::error_code& err,
        dom::node::ptr np) {
 
-    /// get children of supplied node
-    bool result = true;
+    /// start at the first child of the supplied node
     xercesc::DOMNode* xnode = np->xerces_node();
-    xercesc::DOMNodeList* chain = xnode->getChildNodes();
+    if (! xnode) {
+      return false;
+    }
+    xercesc::DOMNode* link = xnode->getFirstChild();
+    if ( !link) {
+      return false;
+    }
+    bool result = true;
 
-    /// iterate through all children
-    for (XMLSize_t i = 0; i < chain->getLength(); ++i) {
-
-      /// access the next xerces dom node in the chain
-      DOMNode* xitem = chain->item(i);
+    /// iterate through all links as siblings
+    for ( ; link != NULL; link = link->getNextSibling() ) {
 
       /// create the adapter dom node using the factory
-      dom::node::ptr dnp = dom::node_factory::create(xitem);
-      if (!dnp) continue;
-
+      dom::node::ptr dnp = dom::node_factory::create(link);
+      if (!dnp) {
+        result = false;
+        continue;
+      }
       /// look in mappings_, does the name exist
       const std::string& name = dnp->name();
       mappings::iterator p = mappings_.find(name);
