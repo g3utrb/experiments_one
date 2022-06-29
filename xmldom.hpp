@@ -5,7 +5,6 @@
 #include <vector>
 #include <memory>
 #include <iostream>
-#include "error_code.hpp"
 #include <xercesc/util/XMLString.hpp>
 #include <xercesc/dom/DOMNode.hpp>
 #include <xercesc/dom/DOMElement.hpp>
@@ -13,6 +12,7 @@
 #include <xercesc/dom/DOMText.hpp>
 #include <xercesc/parsers/XercesDOMParser.hpp>
 #include <xercesc/framework/MemBufInputSource.hpp>
+#include "error_code.hpp"
 
 namespace xml {
 namespace dom {
@@ -40,7 +40,6 @@ namespace dom {
     std::string        name_;
     std::string        value_;
     xercesc::DOMNode*  node_;
-
   };
 
   class element : public node {
@@ -67,12 +66,14 @@ namespace dom {
   public:
 
     typedef std::shared_ptr<parser> ptr;
+
     bool parse(support::error_code& err, const std::string& content);
     node::ptr root();
     ~parser();
 
   private:
-    node::ptr root_;
+    node::ptr          root_;
+    xercesc::XercesDOMParser* parser_;
   };
 
   /// implementations follow
@@ -85,26 +86,26 @@ namespace dom {
     /// or is that too restrctive; maybe it should be the caller's
     /// responsibility to handle it..
     if (node_) {
-      char* tmp = XMLString::transcode(node_->getNodeName());
-      if (tmp) {
-        name_.assign(tmp, ::strlen(tmp));
-      }
-      XMLString::release(&tmp);
 
+      char* tmp = xercesc::XMLString::transcode(node_->getNodeName());
+      if (tmp != (char *) NULL) {
+        name_ = tmp;
+        xercesc::XMLString::release(&tmp);
+      }
       xercesc::DOMNode* link = node_->getFirstChild();
       if (! link) return;
 
-      for (; link != NULL; link = link->getNextSibling() ) {
+      for (; link != 0; link = link->getNextSibling() ) {
 
         if (link && link->getNodeType() == xercesc::DOMNode::TEXT_NODE) {
-          tmp = XMLString::transcode(link->getNodeValue());
-          value_.assign(tmp, ::strlen(tmp));
-          XMLString::release(&tmp);
+          tmp = xercesc::XMLString::transcode(link->getNodeValue());
+          if (tmp != (char *) NULL) {
+            value_ = tmp;
+            xercesc::XMLString::release(&tmp);
+          }
           break;
         }
-
       }
-      XMLString::release(&tmp);
     }
   }
 
@@ -204,12 +205,12 @@ namespace dom {
 
     try {
 
-      xercesc::XercesDOMParser parser;
-      parser.setValidationScheme(xercesc::XercesDOMParser::Val_Never);
-      parser.setDoNamespaces(false);
-      parser.setHandleMultipleImports(false);
-      parser.setValidationSchemaFullChecking(false);
-      parser.setCreateEntityReferenceNodes(false);
+      parser_ = new xercesc::XercesDOMParser();
+      parser_->setValidationScheme(xercesc::XercesDOMParser::Val_Never);
+      parser_->setDoNamespaces(false);
+      parser_->setHandleMultipleImports(false);
+      parser_->setValidationSchemaFullChecking(false);
+      parser_->setCreateEntityReferenceNodes(false);
 
       xercesc::MemBufInputSource memory_buffer(
         (const XMLByte *) content.c_str(),
@@ -217,21 +218,27 @@ namespace dom {
         "test",
         false);
 
-      parser.parse(memory_buffer);
-      DOMDocument* doc = parser.getDocument();
-      DOMElement* elem = doc->getDocumentElement();
+      parser_->parse(memory_buffer);
+      xercesc::DOMDocument* doc = parser_->getDocument();
+      xercesc::DOMElement* elem = doc->getDocumentElement();
       root_ = std::make_shared<element>(elem);
     }
-    catch (const OutOfMemoryException& e) {
+    catch (const xercesc::OutOfMemoryException& e) {
       /// transfer error details into err
+      std::cout << "parsing failed" << std::endl;
+      throw;
       return false;
     }
-    catch (const XMLException& e) {
+    catch (const xercesc::XMLException& e) {
+      std::cout << "parsing failed" << std::endl;
       /// transfer error details into err
+      throw;
       return false;
     }
     catch (...) {
+      std::cout << "parsing failed" << std::endl;
       /// transfer error details into err
+      throw;
       return false;
     }
     return true;
@@ -246,6 +253,7 @@ namespace dom {
   inline
   parser::
   ~parser() {
+    delete parser_;
   }
 
 }}

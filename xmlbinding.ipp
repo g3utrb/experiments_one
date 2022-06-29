@@ -79,7 +79,8 @@ namespace binding {
     }
     /// iterate through all links as siblings
     bool result = true;
-    for ( ; link != NULL; link = link->getNextSibling() ) {
+    link = xnode->getFirstChild();
+    for ( ; link != 0; link = link->getNextSibling() ) {
 
       if (! link) {
         std::cout << "Warning: composite::bind a sibling link node is null.";
