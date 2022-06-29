@@ -1,0 +1,35 @@
+<vMasterMessage>
+  <vMasterHeader type="proto">
+    <vMasterInstrument>SWAP</vMasterInstrument>
+    <vMasterTradeStatus>PENDING_UNAPPROVED</vMasterTradeStatus>
+    <vMasterTradeDate>2009-12-04</vMasterTradeDate>
+    <vMasterStartDate>2009-12-04</vMasterStartDate>
+    <RTLCReferenceCode>something</RTLCReferenceCode>
+    <vMasterEndDate>2012-12-08</vMasterEndDate>
+    <vMasterTradeOrigin>test</vMasterTradeOrigin>
+    <vMasterTradeOriginID>test</vMasterTradeOriginID>
+    <vMasterTrader>Trader</vMasterTrader>
+    <vMasterCoverage>NONE, NONE</vMasterCoverage>
+    <vMasterLocation>LONDON</vMasterLocation>
+    <vMasterBook>LEMU</vMasterBook>
+    <vMasterUserLogin>nbdgh1e</vMasterUserLogin>
+    <vMasterBookLocation>LON</vMasterBookLocation>
+    <vMasterBookDomicile>LON</vMasterBookDomicile>
+    <vMasterEntity>MLC1</vMasterEntity>
+    <vMasterEntityCoperID>95280</vMasterEntityCoperID>
+    <vMasterMLDPGuarantee>No Guarantee</vMasterMLDPGuarantee>
+    <vMasterSwapClearFlag>Not Cleared</vMasterSwapClearFlag>
+    <vMasterCreditCode>NOT REQUIRED</vMasterCreditCode>
+    <vMasterDesk>SWAPSLON</vMasterDesk>
+    <vMasterRevisionDate>Dec 10 2009 3:36:45.000AM</vMasterRevisionDate>
+    <vMasterCreationDate>Dec 10 2009 3:36:45.000AM</vMasterCreationDate>
+    <vMasterDiary>
+      <vMasterDiaryEntry>
+        <diaryText>some diary</diaryText>
+      </vMasterDiaryEntry>
+      <vMasterDiaryEntry>
+        <diaryText>another diary</diaryText>
+      </vMasterDiaryEntry>
+    </vMasterDiary>
+  </vMasterHeader>
+</vMasterMessage>
