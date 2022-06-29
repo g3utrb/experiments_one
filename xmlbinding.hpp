@@ -89,6 +89,7 @@ namespace binding {
     /// the mappings will be used in 'bind' to propagate through
     void insert(const std::string& name, node_base* np);
     void insert(const std::string& name, node_base& n);
+    bool process_attributes(support::error_code& err, xercesc::DOMNode* xnode);
 
     typedef std::map<std::string, node_base*> mappings;
     mappings mappings_;

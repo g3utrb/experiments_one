@@ -21,22 +21,23 @@
 struct vmaster_diary_entry : xml::binding::composite {
 
   vmaster_diary_entry() {
-    insert("diaryText", diary_text);
+    insert("diaryText", text);
   }
-  xml::binding::element_string  diary_text;
+  xml::binding::element_string  text;
 };
 
 struct vmaster_diary : xml::binding::composite {
 
   vmaster_diary() {
-    insert("vMasterDiaryEntry", diary);
+    insert("vMasterDiaryEntry", entries);
   }
-  xml::binding::nodelist<vmaster_diary_entry> diary;
+  xml::binding::nodelist<vmaster_diary_entry> entries;
 };
 
 struct vmaster_header : xml::binding::composite {
 
   vmaster_header() {
+    insert("type",                  type);
     insert("vMasterInstrument",     instrument);
     insert("vMasterTradeStatus",    trade_status);
     insert("vMasterTradeDate",      trade_date);
@@ -63,30 +64,31 @@ struct vmaster_header : xml::binding::composite {
     insert("vMasterDiary",          diary);
   }
 
-  xml::binding::element_string  instrument;
-  xml::binding::element_string  trade_status;
-  xml::binding::element_string  trade_date;
-  xml::binding::element_string  start_date;
-  xml::binding::element_string  rtlc_reference_code;
-  xml::binding::element_string  end_date;
-  xml::binding::element_string  trade_origin;
-  xml::binding::element_string  trade_origin_id;
-  xml::binding::element_string  trader;
-  xml::binding::element_string  coverage;
-  xml::binding::element_string  location;
-  xml::binding::element_string  book;
-  xml::binding::element_string  user_login;
-  xml::binding::element_string  book_location;
-  xml::binding::element_string  book_domicile;
-  xml::binding::element_string  entity;
-  xml::binding::element_int     entity_coper_id;
-  xml::binding::element_string  mldp_guarantee;
-  xml::binding::element_string  swap_clear_flag;
-  xml::binding::element_string  credit_code;
-  xml::binding::element_string  desk;
-  xml::binding::element_string  revision_date;
-  xml::binding::element_string  creation_date;
-  vmaster_diary                 diary;
+  xml::binding::attribute_string   type;
+  xml::binding::element_string     instrument;
+  xml::binding::element_string     trade_status;
+  xml::binding::element_string     trade_date;
+  xml::binding::element_string     start_date;
+  xml::binding::element_string     rtlc_reference_code;
+  xml::binding::element_string     end_date;
+  xml::binding::element_string     trade_origin;
+  xml::binding::element_string     trade_origin_id;
+  xml::binding::element_string     trader;
+  xml::binding::element_string     coverage;
+  xml::binding::element_string     location;
+  xml::binding::element_string     book;
+  xml::binding::element_string     user_login;
+  xml::binding::element_string     book_location;
+  xml::binding::element_string     book_domicile;
+  xml::binding::element_string     entity;
+  xml::binding::element_int        entity_coper_id;
+  xml::binding::element_string     mldp_guarantee;
+  xml::binding::element_string     swap_clear_flag;
+  xml::binding::element_string     credit_code;
+  xml::binding::element_string     desk;
+  xml::binding::element_string     revision_date;
+  xml::binding::element_string     creation_date;
+  vmaster_diary                    diary;
 };
 
 struct vmaster_message : xml::binding::composite {
@@ -135,7 +137,11 @@ void execute() {
   bool has_trader = vmh.trader;
   std::cout << "Has trader " << std::boolalpha << has_trader << std::endl;
   std::cout << "desk " << vmh.desk() << std::endl;
-
+  for (size_t i = 0; i < vmh.diary.entries.size(); ++i) {
+    vmaster_diary_entry vde = vmh.diary.entries[i];
+    std::cout << vde.text() << std::endl;
+  }
+  std::cout << vmh.type() << std::endl;
 }
 
 int main(int argC, char* argV[]) {

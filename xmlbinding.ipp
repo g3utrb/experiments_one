@@ -60,21 +60,21 @@ namespace binding {
 
     if (! np) {
       std::string s = "Warning: composite::bind supplied null dom::node ptr.";
-      std::cout << s << std::endl;
+      err.attach(support::error_code(-1, s));
       return false;
     }
     /// we need the underlying xerces node to iterate
     xercesc::DOMNode* xnode = np->xerces_node();
     if (! xnode) {
       std::string s = "Warning: composite::bind supplied null xerces::node ptr.";
-      std::cout << s << std::endl;
+      err.attach(support::error_code(-1, s));
       return false;
     }
     /// start at the first child of the supplied node
     xercesc::DOMNode* link = xnode->getFirstChild();
     if ( !link) {
       std::string s = "Warning: composite::bind encountered null first child.";
-      std::cout << s << std::endl;
+      err.attach(support::error_code(-1, s));
       return false;
     }
     /// iterate through all links as siblings
@@ -82,41 +82,89 @@ namespace binding {
     link = xnode->getFirstChild();
     for ( ; link != 0; link = link->getNextSibling() ) {
 
+      /// safe than sorry
       if (! link) {
-        std::cout << "Warning: composite::bind a sibling link node is null.";
+        std::string s = "Warning: composite::bind a sibling link node is null.";
+        err.attach(support::error_code(-1, s));
         result = false;
         continue;
       }
-      /// can we safely skip text nodes?
-      if (link->getNodeType() == xercesc::DOMNode::TEXT_NODE) {
+      char* s = xercesc::XMLString::transcode(link->getNodeName());
+      std::string name = s;
+      xercesc::XMLString::release(&s);
+      // std::cout << "Processing link: " << name << std::endl;
+
+      /// for instance "vMasterInstrument" -> an element node..
+      mappings::iterator p = mappings_.find(name);
+      if (p == mappings_.end()) {
+
+        /// we're not interested, continue
         continue;
       }
       /// create the adapter dom node using the factory
-      dom::node::ptr dnp = dom::node_factory::create(link);
+      dom::node::ptr dnp = dom::node_factory::create(err, link);
       if (!dnp) {
+
+        /// some unhandled node type...must be careful
         std::string s = "Warning: could not create adapter node from link.";
-        std::cout << s << std::endl;
+        err.attach(support::error_code(-1, s));
         result = false;
         continue;
       }
-      /// look in mappings_, does the name exist
-      const std::string& name = dnp->name();
-      mappings::iterator p = mappings_.find(name);
-      if (p != mappings_.end()) {
+      /// ready to bind, pass in the current dom node ptr
+      /// the binding node will adopt and it extract/convert the value
+      binding::node_base* bnp = p->second;
+      result &= bnp->bind(err, dnp);
+    }
+    /// this node may have child attributes
+    result &= process_attributes(err, xnode);
+    return result;
+  }
 
-        /// - yes it does, call bind on the binding node ptr
-        /// - pass in this child node in the chain, the binding node
-        /// - will know what to do with it
-        binding::node_base* bnp = p->second;
-        result &= bnp->bind(err, dnp);
+  inline bool
+  composite::
+  process_attributes(support::error_code& err,
+                     xercesc::DOMNode* xnode) {
+
+    /// per xerces - only element nodes have attributes
+    if (xnode->getNodeType() != xercesc::DOMNode::ELEMENT_NODE) {
+      return true;
+    }
+    /// get attributes of this node, could they be null..
+    bool result = true;
+    xercesc::DOMNamedNodeMap* attrs = xnode->getAttributes();
+    if ( !attrs) {
+      return true;
+    }
+    /// search for each attr in this nodes mappings
+    for (XMLSize_t i = 0; i < attrs->getLength(); ++i) {
+
+      xercesc::DOMNode* dap = attrs->item(i);
+      if (! dap) {
+        /// hmmm
+        continue;
       }
-      else {
-        /// this may not signal a failure - need optional capability
-        std::string s = "Warning: could not find mapping for <";
-        s += name + ">.";
-        std::cout << s << std::endl;
-        result = false;
+      /// get the attribute name out of the item
+      char* s = xercesc::XMLString::transcode(dap->getNodeName());
+      std::string attr_name = s;
+      // std::cout << "attr name: " << attr_name << std::endl;
+      xercesc::XMLString::release(&s);
+
+      /// skip if we're not interested in this attribute under this node
+      mappings::iterator p = mappings_.find(attr_name);
+      if (p == mappings_.end()) {
+        continue;
       }
+      binding::node_base* bnp = p->second;
+
+      /// ask the factory to create the node
+      dom::node::ptr anp = dom::node_factory::create(err, dap);
+      if (! anp) {
+        /// hmm
+        continue;
+      }
+      /// and bind to it
+      result &= bnp->bind(err, anp);
     }
     return result;
   }

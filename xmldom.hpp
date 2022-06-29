@@ -32,6 +32,8 @@ namespace dom {
 
     typedef std::shared_ptr<node> ptr;
 
+    virtual bool init(support::error_code& err) = 0;
+
   protected:
 
     node(xercesc::DOMNode* nodep);
@@ -44,22 +46,31 @@ namespace dom {
 
   class element : public node {
   public:
+
     element(xercesc::DOMElement* nodep);
+    virtual bool init(support::error_code& err);
+
   };
 
   class attribute : public node {
   public:
+
     attribute(xercesc::DOMAttr* nodep);
+    virtual bool init(support::error_code& err);
+
   };
 
   class text_node : public node {
   public:
+
     text_node(xercesc::DOMText* dnp);
+    virtual bool init(support::error_code& err);
+
   };
 
   class node_factory {
   public:
-    static node::ptr create(xercesc::DOMNode* xnode);
+    static node::ptr create(support::error_code& err, xercesc::DOMNode* xnode);
   };
 
   class parser {
@@ -79,35 +90,9 @@ namespace dom {
   /// implementations follow
   inline
   node::
-  node(xercesc::DOMNode* nodep) : node_(nodep) {
+  node(xercesc::DOMNode* nodep) : node_(nodep)
+  {}
 
-    /// assuming we're passed a valid xercesc dom node pointer.
-    /// what would happen if it's null? should we throw an exception
-    /// or is that too restrctive; maybe it should be the caller's
-    /// responsibility to handle it..
-    if (node_) {
-
-      char* tmp = xercesc::XMLString::transcode(node_->getNodeName());
-      if (tmp != (char *) NULL) {
-        name_ = tmp;
-        xercesc::XMLString::release(&tmp);
-      }
-      xercesc::DOMNode* link = node_->getFirstChild();
-      if (! link) return;
-
-      for (; link != 0; link = link->getNextSibling() ) {
-
-        if (link && link->getNodeType() == xercesc::DOMNode::TEXT_NODE) {
-          tmp = xercesc::XMLString::transcode(link->getNodeValue());
-          if (tmp != (char *) NULL) {
-            value_ = tmp;
-            xercesc::XMLString::release(&tmp);
-          }
-          break;
-        }
-      }
-    }
-  }
 
   inline
   node::
@@ -150,10 +135,66 @@ namespace dom {
     node(xnode) {
   }
 
+  inline bool
+  element::
+  init(support::error_code& err) {
+
+    if (!node_) {
+      /// ??
+      return true;
+    }
+    char* tmp = xercesc::XMLString::transcode(node_->getNodeName());
+    if (tmp != (char *) NULL) {
+      name_ = tmp;
+      xercesc::XMLString::release(&tmp);
+    }
+    else {
+      /// ?
+      return false;
+    }
+    xercesc::DOMNode* link = node_->getFirstChild();
+    for (; link != 0; link = link->getNextSibling() ) {
+
+      if (link && link->getNodeType() == xercesc::DOMNode::TEXT_NODE) {
+        tmp = xercesc::XMLString::transcode(link->getNodeValue());
+        if (tmp != (char *) NULL) {
+          value_ = tmp;
+          xercesc::XMLString::release(&tmp);
+        }
+        break;
+      }
+    }
+    return true;
+  }
+
   inline
   attribute::
   attribute(xercesc::DOMAttr* xnode) :
     node(xnode) {
+  }
+
+  inline bool
+  attribute::
+  init(support::error_code& err) {
+
+    if (!node_) {
+      /// ??
+      return true;
+    }
+    char* tmp = xercesc::XMLString::transcode(node_->getNodeName());
+    if (tmp != (char *) NULL) {
+      name_ = tmp;
+      xercesc::XMLString::release(&tmp);
+    }
+    else {
+      /// ?
+      return false;
+    }
+    /// this is an attribute node, get the value
+    char* s = xercesc::XMLString::transcode(node_->getNodeValue());
+    value_ = s;
+    xercesc::XMLString::release(&s);
+    return true;
   }
 
   inline
@@ -162,12 +203,21 @@ namespace dom {
     node(xnode) {
   }
 
+  inline bool
+  text_node::
+  init(support::error_code& err) {
+    /// ???
+    return true;
+  }
+
   inline node::ptr
   node_factory::
-  create(xercesc::DOMNode* dnp) {
+  create(support::error_code& err,
+         xercesc::DOMNode* dnp) {
 
-    if (! dnp) return node::ptr();
-
+    if (! dnp) {
+      return node::ptr();
+    }
     dom::node::ptr np;
     switch (dnp->getNodeType()) {
 
@@ -194,6 +244,9 @@ namespace dom {
       }
       default:
         break;
+    }
+    if (np) {
+      np->init(err);
     }
     return np;
   }
@@ -224,21 +277,24 @@ namespace dom {
       root_ = std::make_shared<element>(elem);
     }
     catch (const xercesc::OutOfMemoryException& e) {
-      /// transfer error details into err
-      std::cout << "parsing failed" << std::endl;
-      throw;
+      char* es = xercesc::XMLString::transcode(e.getMessage());
+      std::string m = es;
+      xercesc::XMLString::release(&es);
+      std::string s = "Parsing failed, out of memory: " + m;
+      err.attach(support::error_code(-1, s));
       return false;
     }
     catch (const xercesc::XMLException& e) {
-      std::cout << "parsing failed" << std::endl;
-      /// transfer error details into err
-      throw;
+      char* es = xercesc::XMLString::transcode(e.getMessage());
+      std::string m = es;
+      xercesc::XMLString::release(&es);
+      std::string s = "Parsing failed, xml exception: " + m;
+      err.attach(support::error_code(-1, s));
       return false;
     }
     catch (...) {
-      std::cout << "parsing failed" << std::endl;
-      /// transfer error details into err
-      throw;
+      std::string s = "Unknown exception parsing: " + content;
+      err.attach(support::error_code(-1, s));
       return false;
     }
     return true;
