@@ -17,6 +17,9 @@ namespace support {
     typedef std::vector<error_code>  error_codes;
     const error_codes& chain() const;
 
+    static void attach_or_create(support::error_code& err,
+                                 int code,
+                                 const std::string& s);
   private:
 
     int          code_;
@@ -78,6 +81,20 @@ namespace support {
       os << ec.chain_[i] << std::endl;
     }
     return os;
+  }
+
+  inline void
+  error_code::
+  attach_or_create(support::error_code& err,
+                   int code,
+                   const std::string& s) {
+
+    if (err.code() == 0) {
+      err = support::error_code(code, s);
+    }
+    else {
+      err.attach(support::error_code(code, s));
+    }
   }
 
 }  /// namespace support
